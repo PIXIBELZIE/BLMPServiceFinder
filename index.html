@@ -16,16 +16,20 @@
         .loading-overlay { background: rgba(255, 255, 255, 0.8); z-index: 100; }
         .ad-placeholder { background-color: #fff; border-left: 4px solid #f97316; padding: 16px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); }
         .menu-category { border-bottom: 2px solid #e5e7eb; padding-bottom: 1rem; margin-bottom: 1.5rem; }
+        /* Style for the comparison list inside the card */
+        .comparison-list-wrapper { max-height: 100px; overflow-y: auto; padding-right: 4px; border-radius: 4px; }
+        .comparison-list-wrapper::-webkit-scrollbar { width: 6px; }
+        .comparison-list-wrapper::-webkit-scrollbar-thumb { background: #fed7aa; border-radius: 3px; }
     </style>
 </head>
-<body class="min-h-screen">
+<body class="min-h-screen flex flex-col">
 
     <div id="loading-overlay" class="loading-overlay fixed inset-0 flex items-center justify-center hidden">
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
     </div>
 
     <!-- Main Container -->
-    <div class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+    <div class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 flex-grow">
 
         <!-- Header -->
         <header class="text-center mb-10">
@@ -57,7 +61,7 @@
                             <i data-lucide="search" class="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400"></i>
                             <input type="text" id="search-input" oninput="applyFilters()"
                                 class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500 text-base"
-                                placeholder="Search food (Wings, Tacos), Service ID (BPN001), or Name...">
+                                placeholder="Search 'Stew Chicken' or a Business Name...">
                         </div>
                         <div class="relative">
                             <i data-lucide="filter" class="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400"></i>
@@ -76,7 +80,7 @@
 
                     <!-- No Results Message -->
                     <p id="no-results" class="text-center text-gray-500 mt-10 text-xl hidden">
-                        No services found matching your criteria. Try a broader search!
+                        No services or menu items found matching your criteria. Try a broader search!
                     </p>
                 </div>
 
@@ -100,32 +104,71 @@
         </div>
     </div>
 
+    <!-- Footer -->
+    <footer class="mt-12 py-6 bg-gray-800 text-center text-white">
+        <p class="text-sm">
+            Powered by <span class="font-bold text-orange-500">Pixi Belize</span>. 
+            <span class="text-gray-400">This service is free for local vendors.</span>
+        </p>
+        <p class="text-xs mt-1 text-gray-400">
+            Interested in adding your business? Contact us to join!
+        </p>
+    </footer>
+
     <script>
         // !! IMPORTANT: REPLACE THIS PLACEHOLDER WITH YOUR DEPLOYED APPS SCRIPT URL !!
         const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby-tWFjR-3A7y0xdHmq0R3Zop-l9McjPcBYwF89POke02LRWsNFnlHghA9SGdGQIg4/exec"; 
 
         // Global state
         let allVendors = [];
-        let deliveryVendors = []; // To hold only Delivery services for suggestions
-        let vendorTypes = new Set(); // To hold unique service types for the filter
+        let deliveryVendors = []; 
+        let vendorTypes = new Set();
+        let matchingItemsMap = {}; // Global map to store matched items for comparison view
 
         /**
          * Converts a simple string to a URL for an icon or image.
          */
         function getIconUrl(url, fallbackText) {
             if (url && (url.startsWith('http') || url.startsWith('data:'))) {
-                // If it looks like a valid URL, return it
                 return url;
             }
-            // Use a placeholder image with initials if no valid URL is present
             const initials = fallbackText.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
             return `https://placehold.co/80x80/22c55e/ffffff?text=${encodeURIComponent(initials)}`;
         }
 
         /**
+         * Generates the HTML for social media icons based on vendor data.
+         */
+        function renderSocialIcons(vendor) {
+            let icons = '';
+            
+            // Phone and WhatsApp are always important
+            if (vendor.ContactPhone) {
+                icons += `<a href="tel:${vendor.ContactPhone}" title="Call ${vendor.Name}" class="text-gray-500 hover:text-orange-600"><i data-lucide="phone" class="h-5 w-5"></i></a>`;
+            }
+            if (vendor.WhatsApp) {
+                const whatsappNumber = String(vendor.WhatsApp || '').replace(/\D/g, ''); 
+                if (whatsappNumber) {
+                    icons += `<a href="https://wa.me/${whatsappNumber}" target="_blank" title="WhatsApp ${vendor.Name}" class="text-gray-500 hover:text-green-500"><i data-lucide="message-square" class="h-5 w-5"></i></a>`;
+                }
+            }
+
+            // Check for specific social media links
+            if (vendor.FacebookURL) {
+                icons += `<a href="${vendor.FacebookURL}" target="_blank" title="Facebook" class="text-gray-500 hover:text-blue-700"><i data-lucide="facebook" class="h-5 w-5"></i></a>`;
+            }
+            if (vendor.InstagramURL) {
+                icons += `<a href="${vendor.InstagramURL}" target="_blank" title="Instagram" class="text-gray-500 hover:text-pink-600"><i data-lucide="instagram" class="h-5 w-5"></i></a>`;
+            }
+
+            return icons;
+        }
+
+
+        /**
          * Renders the list of vendor cards based on the search query and filter.
          */
-        function renderVendorList(vendors) {
+        function renderVendorList(vendors, currentQuery, matchedItemsMap) {
             const listContainer = document.getElementById('vendor-list');
             const noResults = document.getElementById('no-results');
             listContainer.innerHTML = '';
@@ -142,16 +185,41 @@
                 card.onclick = () => showProfileView(vendor.VendorID);
 
                 const iconUrl = getIconUrl(vendor.ProfileIconURL, vendor.Name);
-                // FIX: Added (vendor.SearchKeywords || '') to prevent crash if SearchKeywords is null/undefined
-                const keywords = (vendor.SearchKeywords || '').split(',').slice(0, 5).map(s => `<span class="inline-block bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full mr-1 mb-1">${s.trim()}</span>`).join('');
+                const contactIcons = renderSocialIcons(vendor);
+                const matchedItems = matchedItemsMap[vendor.VendorID];
 
-                // Calculate price summary for the card display
-                let priceSummary = 'View Menu/Details';
-                if (vendor.DataJSON && vendor.DataJSON.length > 0 && vendor.DataJSON[0].items) {
-                    const firstItem = vendor.DataJSON[0].items[0];
-                    if (firstItem && firstItem.price) {
-                        priceSummary = `Starting at: ${firstItem.price}`;
-                    }
+                let cardContentHTML = '';
+                
+                // Determine if we are in comparison mode (specific item search) or general view
+                if (currentQuery && matchedItems && matchedItems.length > 0) {
+                    // COMPARISON VIEW: Show specific matched items
+                    cardContentHTML = `
+                        <p class="text-sm font-semibold text-gray-700 mb-2">Items matching "<strong>${currentQuery}</strong>":</p>
+                        <div class="comparison-list-wrapper bg-gray-50 p-2 rounded-lg border border-gray-200">
+                            <div class="space-y-1">
+                                ${matchedItems.slice(0, 10).map(item => `
+                                    <div class="flex justify-between text-sm">
+                                        <span class="text-gray-800 font-medium truncate">${item.name}</span>
+                                        <span class="text-orange-600 font-bold flex-shrink-0 ml-2">${item.price}</span>
+                                    </div>
+                                `).join('')}
+                                ${matchedItems.length > 10 ? `<p class="text-xs text-gray-500 mt-1">...and ${matchedItems.length - 10} more items</p>` : ''}
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    // DEFAULT VIEW: Show Location and "View Profile"
+                    cardContentHTML = `
+                        <div class="mt-2 mb-4">
+                            <div class="flex items-center text-sm text-gray-600">
+                                <i data-lucide="map-pin" class="h-4 w-4 mr-2 text-orange-500"></i>
+                                <span>${vendor.Location || 'Location not specified'}</span>
+                            </div>
+                            <p class="text-base font-semibold text-orange-600 mt-3 hover:underline">
+                                View Profile & Menu Details
+                            </p>
+                        </div>
+                    `;
                 }
                 
                 card.innerHTML = `
@@ -159,13 +227,12 @@
                         <img src="${iconUrl}" onerror="this.onerror=null; this.src=getIconUrl(null, '${vendor.Name}')" class="w-16 h-16 rounded-full object-cover mr-4 ring-2 ring-orange-500 p-0.5" alt="${vendor.Name} Logo">
                         <div>
                             <h2 class="text-xl font-bold text-gray-900">${vendor.Name}</h2>
-                            <p class="text-sm text-orange-600 font-semibold">${vendor.Type} - ID: ${vendor.VendorID}</p>
+                            <p class="text-sm text-orange-600 font-semibold">${vendor.Type}</p>
                         </div>
                     </div>
-                    <p class="text-sm font-semibold text-green-700 mb-3">${priceSummary}</p>
-                    <div class="mt-auto">
-                        <p class="text-sm font-medium text-gray-800 mb-1">Keywords:</p>
-                        <div class="flex flex-wrap">${keywords}</div>
+                    ${cardContentHTML}
+                    <div class="mt-auto pt-3 border-t flex space-x-3">
+                        ${contactIcons}
                     </div>
                 `;
                 listContainer.appendChild(card);
@@ -179,21 +246,49 @@
         function applyFilters() {
             const query = document.getElementById('search-input').value.toLowerCase().trim();
             const typeFilter = document.getElementById('type-filter').value;
+            
+            // Clear previous matches map
+            matchingItemsMap = {}; 
 
             const filteredVendors = allVendors.filter(vendor => {
-                const matchesQuery = !query || 
-                                     vendor.Name.toLowerCase().includes(query) ||
-                                     vendor.VendorID.toLowerCase().includes(query) ||
-                                     // FIX: Added (vendor.SearchKeywords || '') defensive check here too
-                                     (vendor.SearchKeywords || '').toLowerCase().includes(query) ||
-                                     vendor.Type.toLowerCase().includes(query);
+                let matchesQuery = false;
                 
+                // 1. Check Vendor Name, Location, and Keywords
+                const searchableText = `${vendor.Name || ''} ${vendor.Location || ''} ${vendor.SearchKeywords || ''}`.toLowerCase();
+                if (searchableText.includes(query)) {
+                    matchesQuery = true;
+                }
+
+                // 2. Check Menu Items (Deep Search for Comparison)
+                const matchedItems = [];
+                if (vendor.DataJSON && Array.isArray(vendor.DataJSON)) {
+                    vendor.DataJSON.forEach(category => {
+                        if (category.items && Array.isArray(category.items)) {
+                            category.items.forEach(item => {
+                                // Check if item name or description contains the query
+                                if ((item.name || '').toLowerCase().includes(query) || (item.desc || '').toLowerCase().includes(query)) {
+                                    matchedItems.push({
+                                        name: item.name,
+                                        price: item.price || 'Price N/A'
+                                    });
+                                    matchesQuery = true; // The vendor definitely matches if an item matches
+                                }
+                            });
+                        }
+                    });
+                }
+
+                if (matchedItems.length > 0) {
+                    matchingItemsMap[vendor.VendorID] = matchedItems;
+                }
+                
+                // 3. Check Type Filter
                 const matchesType = !typeFilter || vendor.Type === typeFilter;
                 
                 return matchesQuery && matchesType;
             });
 
-            renderVendorList(filteredVendors);
+            renderVendorList(filteredVendors, query, matchingItemsMap);
         }
 
         /**
@@ -201,7 +296,6 @@
          */
         function populateTypeFilter() {
             const filterEl = document.getElementById('type-filter');
-            // Clear previous options
             filterEl.querySelectorAll('option:not([value=""])').forEach(opt => opt.remove());
 
             vendorTypes.forEach(type => {
@@ -222,18 +316,20 @@
 
             let menuHTML = '';
 
-            dataJson.forEach(category => {
+            const categories = Array.isArray(dataJson) ? dataJson : [{ category: "Details", description: "Services offered:", items: dataJson.items || [] }];
+
+            categories.forEach(category => {
                 menuHTML += `
                     <div class="menu-category">
                         <h3 class="text-2xl font-bold text-gray-900 mb-2">${category.category}</h3>
                         <p class="text-gray-600 mb-4">${category.description || ''}</p>
                         <div class="space-y-3">
                 `;
-                category.items.forEach(item => {
+                (category.items || []).forEach(item => { 
                     menuHTML += `
                         <div class="flex justify-between items-start border-b border-gray-100 pb-2">
                             <div>
-                                <p class="text-lg font-semibold text-gray-800">${item.name}</p>
+                                <p class="text-lg font-semibold text-gray-800">${item.name || 'Untitled Item'}</p>
                                 <p class="text-sm text-gray-500 italic">${item.desc || ''}</p>
                             </div>
                             <p class="text-lg font-bold text-orange-600 flex-shrink-0 ml-4">${item.price || 'Varies'}</p>
@@ -260,7 +356,6 @@
                 return; // Only suggest delivery for restaurants
             }
 
-            // Show max 3 random delivery vendors
             const shuffledDelivery = deliveryVendors.sort(() => 0.5 - Math.random());
             let deliveryCards = shuffledDelivery.slice(0, 3).map(vendor => { 
                 const iconUrl = getIconUrl(vendor.ProfileIconURL, vendor.Name);
@@ -296,15 +391,25 @@
             const iconUrl = getIconUrl(vendor.ProfileIconURL, vendor.Name);
 
             let contactItems = '';
+            
+            // Build the contact/social section
+            if (vendor.Location) {
+                contactItems += `<div class="flex items-center mb-2"><i data-lucide="map-pin" class="h-5 w-5 text-gray-500 mr-3"></i><span class="text-gray-800">${vendor.Location}</span></div>`;
+            }
             if (vendor.ContactPhone) {
-                contactItems += `<div class="flex items-center mb-2"><i data-lucide="phone" class="h-5 w-5 text-gray-500 mr-3"></i><a href="tel:${vendor.ContactPhone}" class="text-blue-600 hover:underline">${vendor.ContactPhone}</a></div>`;
+                contactItems += `<div class="flex items-center mb-2"><i data-lucide="phone" class="h-5 w-5 text-gray-500 mr-3"></i><a href="tel:${vendor.ContactPhone}" class="text-blue-600 hover:underline">${vendor.ContactPhone} (Call)</a></div>`;
             }
             if (vendor.WhatsApp) {
-                const whatsappNumber = String(vendor.WhatsApp).replace(/\D/g, ''); // Clean number for link
-                contactItems += `<div class="flex items-center mb-2"><i data-lucide="message-square" class="h-5 w-5 text-green-500 mr-3"></i><a href="https://wa.me/${whatsappNumber}" target="_blank" class="text-green-600 hover:underline">Chat on WhatsApp</a></div>`;
+                const whatsappNumber = String(vendor.WhatsApp || '').replace(/\D/g, ''); 
+                if (whatsappNumber) {
+                     contactItems += `<div class="flex items-center mb-2"><i data-lucide="message-square" class="h-5 w-5 text-green-500 mr-3"></i><a href="https://wa.me/${whatsappNumber}" target="_blank" class="text-green-600 hover:underline">Chat on WhatsApp</a></div>`;
+                }
             }
-            if (vendor.SocialMedia) {
-                contactItems += `<div class="flex items-center mb-2"><i data-lucide="users" class="h-5 w-5 text-purple-500 mr-3"></i><a href="${vendor.SocialMedia}" target="_blank" class="text-purple-600 hover:underline">Social Media Profile</a></div>`;
+            if (vendor.FacebookURL) {
+                contactItems += `<div class="flex items-center mb-2"><i data-lucide="facebook" class="h-5 w-5 text-blue-700 mr-3"></i><a href="${vendor.FacebookURL}" target="_blank" class="text-blue-600 hover:underline">Visit Facebook Page</a></div>`;
+            }
+            if (vendor.InstagramURL) {
+                contactItems += `<div class="flex items-center mb-2"><i data-lucide="instagram" class="h-5 w-5 text-pink-600 mr-3"></i><a href="${vendor.InstagramURL}" target="_blank" class="text-pink-600 hover:underline">Visit Instagram Profile</a></div>`;
             }
 
             profileContainer.innerHTML = `
@@ -313,21 +418,16 @@
                     <div>
                         <h1 class="text-3xl font-extrabold text-gray-900">${vendor.Name}</h1>
                         <p class="text-lg text-orange-600 font-medium">${vendor.Type} Service</p>
-                        <p class="text-sm text-gray-500 mt-1">Service ID: ${vendor.VendorID}</p>
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-                    <!-- Contact Details Column -->
-                    <div class="lg:col-span-1">
-                        <h2 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Contact Details</h2>
-                        ${contactItems || '<p class="text-gray-500">No contact information provided.</p>'}
-                    </div>
-
-                    <!-- Searchable Keywords Column -->
-                     <div class="lg:col-span-2">
-                        <h2 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Search Keywords</h2>
-                        <p class="text-gray-800">${(vendor.SearchKeywords || '').split(',').map(s => `<span class="inline-block bg-orange-100 text-orange-800 text-sm px-2 py-0.5 rounded-full mr-1 mb-1">${s.trim()}</span>`).join('')}</p>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                    <!-- Contact Details Column (Now takes up the space where keywords used to be) -->
+                    <div class="lg:col-span-2">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Connect & Locate</h2>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            ${contactItems || '<p class="text-gray-500">No contact information provided.</p>'}
+                        </div>
                     </div>
                 </div>
 
@@ -339,42 +439,6 @@
             `;
             // Suggest delivery services if it's a restaurant
             renderDeliverySuggestions(vendor);
-            lucide.createIcons();
-        }
-
-        /**
-         * Renders the Ad sidebar from all available approved AdContent.
-         */
-        function renderAdSidebar() {
-            const adSidebar = document.getElementById('ad-sidebar');
-            adSidebar.innerHTML = '';
-            
-            // Collect all vendors with valid ad content
-            const availableAds = allVendors.filter(v => v.AdContent && v.AdContent.title && v.AdContent.body);
-
-            if (availableAds.length === 0) {
-                 adSidebar.innerHTML = `
-                    <div class="ad-placeholder text-center text-gray-400">
-                        <p class="text-sm font-semibold text-orange-600 mb-2">AD SPACE</p>
-                        <i data-lucide="megaphone" class="mx-auto h-8 w-8"></i>
-                        <p class="text-xs mt-2">No active ads currently displayed.</p>
-                    </div>
-                 `;
-            } else {
-                // For simplicity, pick a random ad to display
-                const randomAd = availableAds[Math.floor(Math.random() * availableAds.length)];
-                
-                adSidebar.innerHTML = `
-                    <div class="ad-placeholder">
-                        <p class="text-sm font-semibold text-orange-600">FEATURED AD</p>
-                        <h3 class="text-xl font-bold text-gray-900 mt-1">${randomAd.AdContent.title}</h3>
-                        <p class="text-gray-700 mt-2 text-sm">${randomAd.AdContent.body}</p>
-                        <button onclick="showProfileView('${randomAd.VendorID}')" class="mt-3 w-full bg-orange-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-orange-700 transition">
-                            View Offer
-                        </button>
-                    </div>
-                `;
-            }
             lucide.createIcons();
         }
 
@@ -400,7 +464,7 @@
             renderProfile(vendor);
             document.getElementById('list-view').classList.add('hidden');
             document.getElementById('profile-view').classList.remove('hidden');
-            window.scrollTo(0, 0); // Scroll to top for a clean view transition
+            window.scrollTo(0, 0); 
         }
 
         /**
@@ -444,7 +508,6 @@
                         // Populate vendor types for filtering
                         allVendors.forEach(vendor => {
                             vendorTypes.add(vendor.Type);
-                            // Separate delivery vendors for easy suggestions
                             if (vendor.Type === 'Delivery') {
                                 deliveryVendors.push(vendor);
                             }
@@ -460,9 +523,7 @@
                     }
 
                 } catch (error) {
-                    // console.error(`Attempt ${attempt + 1}: Failed to fetch data.`, error.message);
                     if (attempt === maxRetries - 1) {
-                        // Display error to the user if all retries fail
                         document.body.insertAdjacentHTML('beforeend', `
                             <div id="load-error-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
                                 <div class="bg-white p-6 rounded-lg shadow-2xl">
@@ -480,6 +541,42 @@
                     currentDelay *= 2; 
                 }
             }
+        }
+
+        /**
+         * Renders the Ad sidebar from all available approved AdContent.
+         */
+        function renderAdSidebar() {
+            const adSidebar = document.getElementById('ad-sidebar');
+            adSidebar.innerHTML = '';
+            
+            // Collect all vendors with valid ad content
+            const availableAds = allVendors.filter(v => v.AdContent && typeof v.AdContent === 'object' && v.AdContent.title && v.AdContent.body);
+
+            if (availableAds.length === 0) {
+                 adSidebar.innerHTML = `
+                    <div class="ad-placeholder text-center text-gray-400">
+                        <p class="text-sm font-semibold text-orange-600 mb-2">AD SPACE</p>
+                        <i data-lucide="megaphone" class="mx-auto h-8 w-8"></i>
+                        <p class="text-xs mt-2">No active ads currently displayed.</p>
+                    </div>
+                 `;
+            } else {
+                // For simplicity, pick a random ad to display
+                const randomAd = availableAds[Math.floor(Math.random() * availableAds.length)];
+                
+                adSidebar.innerHTML = `
+                    <div class="ad-placeholder">
+                        <p class="text-sm font-semibold text-orange-600">FEATURED AD</p>
+                        <h3 class="text-xl font-bold text-gray-900 mt-1">${randomAd.AdContent.title}</h3>
+                        <p class="text-gray-700 mt-2 text-sm">${randomAd.AdContent.body}</p>
+                        <button onclick="showProfileView('${randomAd.VendorID}')" class="mt-3 w-full bg-orange-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-orange-700 transition">
+                            View Offer
+                        </button>
+                    </div>
+                `;
+            }
+            lucide.createIcons();
         }
 
         // Initialize the application on page load
