@@ -14,8 +14,8 @@
         .vendor-card { transition: all 0.2s ease; }
         .vendor-card:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); }
         .loading-overlay { background: rgba(255, 255, 255, 0.8); z-index: 100; }
-        /* Simple Ad Placeholder Styling */
-        .ad-placeholder { background-color: #fff; border-left: 4px solid #f97316; padding: 12px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); }
+        .ad-placeholder { background-color: #fff; border-left: 4px solid #f97316; padding: 16px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05); }
+        .menu-category { border-bottom: 2px solid #e5e7eb; padding-bottom: 1rem; margin-bottom: 1.5rem; }
     </style>
 </head>
 <body class="min-h-screen">
@@ -30,19 +30,19 @@
         <!-- Header -->
         <header class="text-center mb-10">
             <h1 class="text-4xl font-extrabold text-gray-900 tracking-tight">Belmopan <span class="text-orange-600">Service Finder</span></h1>
-            <p class="mt-2 text-lg text-gray-500">Restaurants, Taxis, and Local Services at your fingertips.</p>
+            <p class="mt-2 text-lg text-gray-500">Find Restaurants, Taxis, and Local Services with detailed menus and prices.</p>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            <!-- Sidebar for Ads (Optional future implementation) -->
+            <!-- Sidebar for Ads -->
             <aside class="hidden lg:block lg:col-span-1">
-                <div class="ad-placeholder">
-                    <p class="text-sm font-semibold text-orange-600">AD SPACE</p>
-                    <p class="text-xs text-gray-600">Your ad here (250x600 px)</p>
-                </div>
-                <div class="ad-placeholder">
-                    <p class="text-sm font-semibold text-orange-600">AD SPACE</p>
-                    <p class="text-xs text-gray-600">Small local ads</p>
+                <div id="ad-sidebar">
+                    <!-- Ads will be inserted here -->
+                    <div class="ad-placeholder text-center text-gray-400">
+                        <p class="text-sm font-semibold text-orange-600 mb-2">AD SPACE</p>
+                        <i data-lucide="megaphone" class="mx-auto h-8 w-8"></i>
+                        <p class="text-xs mt-2">No active ads currently displayed.</p>
+                    </div>
                 </div>
             </aside>
 
@@ -51,13 +51,21 @@
 
                 <!-- Search and List View -->
                 <div id="list-view">
-                    <!-- Search Bar -->
-                    <div class="mb-8 p-4 bg-white shadow-lg rounded-xl">
-                        <div class="relative">
+                    <!-- Search Bar and Filter -->
+                    <div class="mb-8 p-4 bg-white shadow-lg rounded-xl flex flex-col sm:flex-row gap-4">
+                        <div class="relative flex-grow">
                             <i data-lucide="search" class="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400"></i>
-                            <input type="text" id="search-input" oninput="handleSearch(this.value)"
-                                class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500 text-lg"
-                                placeholder="Search for food (Tacos, Burritos), Taxi, or Service ID (BPN001)...">
+                            <input type="text" id="search-input" oninput="applyFilters()"
+                                class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-orange-500 focus:border-orange-500 text-base"
+                                placeholder="Search food (Wings, Tacos), Service ID (BPN001), or Name...">
+                        </div>
+                        <div class="relative">
+                            <i data-lucide="filter" class="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400"></i>
+                            <select id="type-filter" onchange="applyFilters()"
+                                class="w-full sm:w-48 pl-10 pr-4 py-3 border border-gray-300 rounded-lg appearance-none focus:ring-orange-500 focus:border-orange-500 bg-white text-base">
+                                <option value="">All Services</option>
+                                <!-- Types will be populated by JS -->
+                            </select>
                         </div>
                     </div>
 
@@ -68,18 +76,23 @@
 
                     <!-- No Results Message -->
                     <p id="no-results" class="text-center text-gray-500 mt-10 text-xl hidden">
-                        No services found matching your search. Try a different item!
+                        No services found matching your criteria. Try a broader search!
                     </p>
                 </div>
 
                 <!-- Profile View -->
                 <div id="profile-view" class="hidden">
-                    <button onclick="showListView()" class="mb-6 inline-flex items-center text-orange-600 hover:text-orange-800 font-medium">
+                    <button onclick="showListView()" class="mb-6 inline-flex items-center text-orange-600 hover:text-orange-800 font-medium p-2 rounded-lg bg-orange-50 hover:bg-orange-100 transition">
                         <i data-lucide="arrow-left" class="h-5 w-5 mr-2"></i>
                         Back to Search Results
                     </button>
                     <div id="profile-details" class="bg-white p-6 shadow-xl rounded-xl">
                         <!-- Profile content will be inserted here by JavaScript -->
+                    </div>
+                    
+                    <!-- Delivery Suggestion Block -->
+                    <div id="delivery-suggestions" class="mt-8">
+                        <!-- Delivery vendors will be suggested here -->
                     </div>
                 </div>
 
@@ -89,37 +102,28 @@
 
     <script>
         // !! IMPORTANT: REPLACE THIS PLACEHOLDER WITH YOUR DEPLOYED APPS SCRIPT URL !!
-        const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby-tWFjR-3A7y0xdHmq0R3Zop-l9McjPcBYwF89POke02LRWsNFnlHghA9SGdGQIg4/exec";
+        const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby-tWFjR-3A7y0xdHmq0R3Zop-l9McjPcBYwF89POke02LRWsNFnlHghA9SGdGQIg4/exec"; 
 
         // Global state
         let allVendors = [];
-        let currentView = 'list'; // 'list' or 'profile'
-
-        // Utility to convert App Script header keys to friendly display names
-        const KEY_MAP = {
-            'VendorID': 'Service ID',
-            'Type': 'Service Type',
-            'Name': 'Name',
-            'ContactPhone': 'Contact Phone',
-            'WhatsApp': 'WhatsApp',
-            'SocialMedia': 'Social Media',
-            'Services': 'Menu/Services',
-            'PriceDetails': 'Price Range',
-        };
+        let deliveryVendors = []; // To hold only Delivery services for suggestions
+        let vendorTypes = new Set(); // To hold unique service types for the filter
 
         /**
          * Converts a simple string to a URL for an icon or image.
          */
         function getIconUrl(url, fallbackText) {
-            // Check if it's a valid URL, otherwise use a placeholder
             if (url && (url.startsWith('http') || url.startsWith('data:'))) {
+                // If it looks like a valid URL, return it
                 return url;
             }
-            return `https://placehold.co/80x80/22c55e/ffffff?text=${encodeURIComponent(fallbackText.substring(0, 2).toUpperCase())}`;
+            // Use a placeholder image with initials if no valid URL is present
+            const initials = fallbackText.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+            return `https://placehold.co/80x80/22c55e/ffffff?text=${encodeURIComponent(initials)}`;
         }
 
         /**
-         * Renders the list of vendor cards based on the search query.
+         * Renders the list of vendor cards based on the search query and filter.
          */
         function renderVendorList(vendors) {
             const listContainer = document.getElementById('vendor-list');
@@ -137,10 +141,19 @@
                 card.className = 'vendor-card bg-white p-5 rounded-xl shadow-md border border-gray-100 cursor-pointer flex flex-col justify-between';
                 card.onclick = () => showProfileView(vendor.VendorID);
 
-                // Use the icon URL or a fallback placeholder text
                 const iconUrl = getIconUrl(vendor.ProfileIconURL, vendor.Name);
-                const searchableServices = vendor.Services.split(',').map(s => `<span class="inline-block bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full mr-1 mb-1">${s.trim()}</span>`).join('');
+                // FIX: Added (vendor.SearchKeywords || '') to prevent crash if SearchKeywords is null/undefined
+                const keywords = (vendor.SearchKeywords || '').split(',').slice(0, 5).map(s => `<span class="inline-block bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full mr-1 mb-1">${s.trim()}</span>`).join('');
 
+                // Calculate price summary for the card display
+                let priceSummary = 'View Menu/Details';
+                if (vendor.DataJSON && vendor.DataJSON.length > 0 && vendor.DataJSON[0].items) {
+                    const firstItem = vendor.DataJSON[0].items[0];
+                    if (firstItem && firstItem.price) {
+                        priceSummary = `Starting at: ${firstItem.price}`;
+                    }
+                }
+                
                 card.innerHTML = `
                     <div class="flex items-center mb-4">
                         <img src="${iconUrl}" onerror="this.onerror=null; this.src=getIconUrl(null, '${vendor.Name}')" class="w-16 h-16 rounded-full object-cover mr-4 ring-2 ring-orange-500 p-0.5" alt="${vendor.Name} Logo">
@@ -149,37 +162,130 @@
                             <p class="text-sm text-orange-600 font-semibold">${vendor.Type} - ID: ${vendor.VendorID}</p>
                         </div>
                     </div>
-                    <p class="text-gray-700 mb-3">${vendor.PriceDetails}</p>
+                    <p class="text-sm font-semibold text-green-700 mb-3">${priceSummary}</p>
                     <div class="mt-auto">
-                        <p class="text-sm font-medium text-gray-800 mb-1">Services/Items:</p>
-                        <div class="flex flex-wrap">${searchableServices}</div>
+                        <p class="text-sm font-medium text-gray-800 mb-1">Keywords:</p>
+                        <div class="flex flex-wrap">${keywords}</div>
                     </div>
                 `;
                 listContainer.appendChild(card);
             });
-            // Re-render Lucide icons if any were dynamically added
             lucide.createIcons();
         }
 
         /**
-         * Handles the search input and filters the vendor list.
+         * Filters the vendor list based on search input and type filter.
          */
-        function handleSearch(query) {
-            const q = query.toLowerCase().trim();
-            let filteredVendors = [];
+        function applyFilters() {
+            const query = document.getElementById('search-input').value.toLowerCase().trim();
+            const typeFilter = document.getElementById('type-filter').value;
 
-            if (!q) {
-                filteredVendors = allVendors;
-            } else {
-                filteredVendors = allVendors.filter(vendor =>
-                    vendor.Name.toLowerCase().includes(q) ||
-                    vendor.VendorID.toLowerCase().includes(q) ||
-                    vendor.Services.toLowerCase().includes(q) ||
-                    vendor.Type.toLowerCase().includes(q)
-                );
-            }
+            const filteredVendors = allVendors.filter(vendor => {
+                const matchesQuery = !query || 
+                                     vendor.Name.toLowerCase().includes(query) ||
+                                     vendor.VendorID.toLowerCase().includes(query) ||
+                                     // FIX: Added (vendor.SearchKeywords || '') defensive check here too
+                                     (vendor.SearchKeywords || '').toLowerCase().includes(query) ||
+                                     vendor.Type.toLowerCase().includes(query);
+                
+                const matchesType = !typeFilter || vendor.Type === typeFilter;
+                
+                return matchesQuery && matchesType;
+            });
 
             renderVendorList(filteredVendors);
+        }
+
+        /**
+         * Populates the Service Type filter dropdown.
+         */
+        function populateTypeFilter() {
+            const filterEl = document.getElementById('type-filter');
+            // Clear previous options
+            filterEl.querySelectorAll('option:not([value=""])').forEach(opt => opt.remove());
+
+            vendorTypes.forEach(type => {
+                const option = document.createElement('option');
+                option.value = type;
+                option.textContent = type;
+                filterEl.appendChild(option);
+            });
+        }
+
+        /**
+         * Renders the full, categorized menu from the DataJSON object.
+         */
+        function renderMenu(dataJson) {
+            if (!dataJson || dataJson.length === 0) {
+                return '<p class="text-gray-500">No detailed menu or service list available.</p>';
+            }
+
+            let menuHTML = '';
+
+            dataJson.forEach(category => {
+                menuHTML += `
+                    <div class="menu-category">
+                        <h3 class="text-2xl font-bold text-gray-900 mb-2">${category.category}</h3>
+                        <p class="text-gray-600 mb-4">${category.description || ''}</p>
+                        <div class="space-y-3">
+                `;
+                category.items.forEach(item => {
+                    menuHTML += `
+                        <div class="flex justify-between items-start border-b border-gray-100 pb-2">
+                            <div>
+                                <p class="text-lg font-semibold text-gray-800">${item.name}</p>
+                                <p class="text-sm text-gray-500 italic">${item.desc || ''}</p>
+                            </div>
+                            <p class="text-lg font-bold text-orange-600 flex-shrink-0 ml-4">${item.price || 'Varies'}</p>
+                        </div>
+                    `;
+                });
+                menuHTML += `
+                        </div>
+                    </div>
+                `;
+            });
+
+            return menuHTML;
+        }
+
+        /**
+         * Renders suggestions for Delivery services, only if the current vendor is a Restaurant.
+         */
+        function renderDeliverySuggestions(currentVendor) {
+            const suggestionsContainer = document.getElementById('delivery-suggestions');
+            suggestionsContainer.innerHTML = '';
+            
+            if (currentVendor.Type !== 'Restaurant' || deliveryVendors.length === 0) {
+                return; // Only suggest delivery for restaurants
+            }
+
+            // Show max 3 random delivery vendors
+            const shuffledDelivery = deliveryVendors.sort(() => 0.5 - Math.random());
+            let deliveryCards = shuffledDelivery.slice(0, 3).map(vendor => { 
+                const iconUrl = getIconUrl(vendor.ProfileIconURL, vendor.Name);
+                return `
+                    <div class="flex items-center p-4 bg-white rounded-lg shadow-sm border border-orange-200 cursor-pointer transition hover:bg-orange-50" onclick="showProfileView('${vendor.VendorID}')">
+                        <img src="${iconUrl}" onerror="this.onerror=null; this.src=getIconUrl(null, '${vendor.Name}')" class="w-10 h-10 rounded-full object-cover mr-3" alt="${vendor.Name} Logo">
+                        <div>
+                            <p class="font-semibold text-gray-900">${vendor.Name}</p>
+                            <p class="text-sm text-orange-600">Tap to see rates</p>
+                        </div>
+                        <i data-lucide="arrow-right" class="h-5 w-5 ml-auto text-gray-400"></i>
+                    </div>
+                `;
+            }).join('');
+
+            suggestionsContainer.innerHTML = `
+                <div class="p-5 bg-orange-100 rounded-xl">
+                    <h2 class="text-2xl font-bold text-orange-800 mb-4">Need Delivery for ${currentVendor.Name}?</h2>
+                    <p class="text-gray-700 mb-4">Check out these trusted local delivery services who can bring your order right to your door:</p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        ${deliveryCards}
+                    </div>
+                </div>
+            `;
+            lucide.createIcons();
         }
 
         /**
@@ -211,59 +317,99 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
                     <!-- Contact Details Column -->
-                    <div>
-                        <h2 class="text-2xl font-semibold text-gray-800 mb-4 border-b pb-2">Contact Details</h2>
+                    <div class="lg:col-span-1">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Contact Details</h2>
                         ${contactItems || '<p class="text-gray-500">No contact information provided.</p>'}
                     </div>
 
-                    <!-- Menu/Services Column -->
-                    <div>
-                        <h2 class="text-2xl font-semibold text-gray-800 mb-4 border-b pb-2">Menu & Pricing</h2>
-                        <div class="space-y-4">
-                            <div class="bg-gray-50 p-3 rounded-lg">
-                                <p class="text-sm font-medium text-gray-600">Offered Services</p>
-                                <p class="text-gray-800 mt-1 whitespace-pre-wrap">${vendor.Services.split(',').map(s => `<span class="inline-block bg-orange-100 text-orange-800 text-sm px-2 py-0.5 rounded-full mr-1 mb-1">${s.trim()}</span>`).join('')}</p>
-                            </div>
-                            <div class="bg-gray-50 p-3 rounded-lg">
-                                <p class="text-sm font-medium text-gray-600">Pricing/Rates</p>
-                                <p class="text-lg font-bold text-green-700 mt-1">${vendor.PriceDetails || 'Contact for details'}</p>
-                            </div>
-                        </div>
+                    <!-- Searchable Keywords Column -->
+                     <div class="lg:col-span-2">
+                        <h2 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Search Keywords</h2>
+                        <p class="text-gray-800">${(vendor.SearchKeywords || '').split(',').map(s => `<span class="inline-block bg-orange-100 text-orange-800 text-sm px-2 py-0.5 rounded-full mr-1 mb-1">${s.trim()}</span>`).join('')}</p>
                     </div>
                 </div>
+
+                <!-- Categorized Menu/Services -->
+                <div class="mt-8">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-6">Service & Pricing Details</h2>
+                    ${renderMenu(vendor.DataJSON)}
+                </div>
             `;
-            // Re-render Lucide icons
+            // Suggest delivery services if it's a restaurant
+            renderDeliverySuggestions(vendor);
             lucide.createIcons();
         }
 
         /**
-         * Switches the view to the list (search) view.
+         * Renders the Ad sidebar from all available approved AdContent.
          */
-        function showListView() {
-            document.getElementById('profile-view').classList.add('hidden');
-            document.getElementById('list-view').classList.remove('hidden');
-            currentView = 'list';
-            // Clear the search field (optional) and re-render the full list
-            document.getElementById('search-input').value = '';
-            handleSearch('');
+        function renderAdSidebar() {
+            const adSidebar = document.getElementById('ad-sidebar');
+            adSidebar.innerHTML = '';
+            
+            // Collect all vendors with valid ad content
+            const availableAds = allVendors.filter(v => v.AdContent && v.AdContent.title && v.AdContent.body);
+
+            if (availableAds.length === 0) {
+                 adSidebar.innerHTML = `
+                    <div class="ad-placeholder text-center text-gray-400">
+                        <p class="text-sm font-semibold text-orange-600 mb-2">AD SPACE</p>
+                        <i data-lucide="megaphone" class="mx-auto h-8 w-8"></i>
+                        <p class="text-xs mt-2">No active ads currently displayed.</p>
+                    </div>
+                 `;
+            } else {
+                // For simplicity, pick a random ad to display
+                const randomAd = availableAds[Math.floor(Math.random() * availableAds.length)];
+                
+                adSidebar.innerHTML = `
+                    <div class="ad-placeholder">
+                        <p class="text-sm font-semibold text-orange-600">FEATURED AD</p>
+                        <h3 class="text-xl font-bold text-gray-900 mt-1">${randomAd.AdContent.title}</h3>
+                        <p class="text-gray-700 mt-2 text-sm">${randomAd.AdContent.body}</p>
+                        <button onclick="showProfileView('${randomAd.VendorID}')" class="mt-3 w-full bg-orange-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-orange-700 transition">
+                            View Offer
+                        </button>
+                    </div>
+                `;
+            }
+            lucide.createIcons();
         }
 
         /**
-         * Switches the view to the profile view for the given VendorID.
+         * Switches the view to the profile view for a specific vendor.
          */
         function showProfileView(vendorId) {
             const vendor = allVendors.find(v => v.VendorID === vendorId);
             if (!vendor) {
                 console.error("Vendor not found:", vendorId);
+                // Fallback: simple message box
+                document.body.insertAdjacentHTML('beforeend', `
+                    <div id="error-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+                        <div class="bg-white p-6 rounded-lg shadow-2xl">
+                            <h3 class="text-xl font-bold text-red-600 mb-4">Error</h3>
+                            <p>Service profile not found for ID: ${vendorId}</p>
+                            <button onclick="document.getElementById('error-modal').remove()" class="mt-4 bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600">Close</button>
+                        </div>
+                    </div>
+                `);
                 return;
             }
             renderProfile(vendor);
             document.getElementById('list-view').classList.add('hidden');
             document.getElementById('profile-view').classList.remove('hidden');
-            currentView = 'profile';
             window.scrollTo(0, 0); // Scroll to top for a clean view transition
+        }
+
+        /**
+         * Switches the view back to the list (search) view.
+         */
+        function showListView() {
+            document.getElementById('profile-view').classList.add('hidden');
+            document.getElementById('list-view').classList.remove('hidden');
+            applyFilters(); // Re-render the filtered/full list
         }
 
 
@@ -279,16 +425,14 @@
             const loadingEl = document.getElementById('loading-overlay');
             loadingEl.classList.remove('hidden');
 
-            // Implement exponential backoff for resilience
             const maxRetries = 5;
-            let currentDelay = 1000; // Start with 1 second delay
+            let currentDelay = 1000;
 
             for (let attempt = 0; attempt < maxRetries; attempt++) {
                 try {
                     const response = await fetch(APP_SCRIPT_URL, { method: 'GET' });
 
                     if (!response.ok) {
-                         // Throw error for non-OK status codes (e.g., 404, 500)
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
 
@@ -296,44 +440,51 @@
 
                     if (result.status === "success") {
                         allVendors = result.data;
-                        renderVendorList(allVendors);
+                        
+                        // Populate vendor types for filtering
+                        allVendors.forEach(vendor => {
+                            vendorTypes.add(vendor.Type);
+                            // Separate delivery vendors for easy suggestions
+                            if (vendor.Type === 'Delivery') {
+                                deliveryVendors.push(vendor);
+                            }
+                        });
+
+                        populateTypeFilter();
+                        applyFilters(); // Initial render of the list
+                        renderAdSidebar(); // Render the ads
                         loadingEl.classList.add('hidden');
-                        return; // Success, exit the function
+                        return;
                     } else {
                         throw new Error(result.message || "Failed to retrieve data.");
                     }
 
                 } catch (error) {
-                    console.error(`Attempt ${attempt + 1}: Failed to fetch data.`, error.message);
+                    // console.error(`Attempt ${attempt + 1}: Failed to fetch data.`, error.message);
                     if (attempt === maxRetries - 1) {
-                        alert(`Failed to load service data after multiple attempts. Error: ${error.message}. Check your Apps Script deployment.`);
+                        // Display error to the user if all retries fail
+                        document.body.insertAdjacentHTML('beforeend', `
+                            <div id="load-error-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+                                <div class="bg-white p-6 rounded-lg shadow-2xl">
+                                    <h3 class="text-xl font-bold text-red-600 mb-4">Connection Error</h3>
+                                    <p class="mb-4">Could not load service data. Please ensure the Apps Script URL is correct and deployed as a public web app.</p>
+                                    <p class="text-sm text-gray-500">Details: ${error.message}</p>
+                                    <button onclick="document.getElementById('load-error-modal').remove()" class="mt-4 bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600">Acknowledge</button>
+                                </div>
+                            </div>
+                        `);
                         loadingEl.classList.add('hidden');
-                        return; // Max retries reached
+                        return;
                     }
-                    // Wait with exponential backoff before next retry
                     await new Promise(resolve => setTimeout(resolve, currentDelay));
-                    currentDelay *= 2; // Double the delay for the next attempt
+                    currentDelay *= 2; 
                 }
-            }
-        }
-
-        // Global check to handle deep linking (Service ID search)
-        function checkDeepLink() {
-            // A simple implementation of deep linking based on a query parameter
-            const params = new URLSearchParams(window.location.search);
-            const id = params.get('id');
-            if (id) {
-                // Pre-populate search and execute it
-                document.getElementById('search-input').value = id;
-                handleSearch(id);
             }
         }
 
         // Initialize the application on page load
         window.onload = function() {
             fetchData();
-            // Lucide Icons are initialized by the render functions, but run once here for static elements
-            lucide.createIcons();
         };
 
     </script>
