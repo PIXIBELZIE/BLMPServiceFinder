@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Belmopan Service Finder</title>
+    <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         /* Custom styles for aesthetic enhancements */
@@ -26,16 +28,20 @@
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
     </div>
 
+    <!-- Main Container -->
     <div class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 flex-grow">
 
+        <!-- Header -->
         <header class="text-center mb-10">
             <h1 class="text-4xl font-extrabold text-gray-900 tracking-tight">Belmopan <span class="text-orange-600">Service Finder</span></h1>
             <p class="mt-2 text-lg text-gray-500">Find Restaurants, Taxis, and Local Services with detailed menus and prices.</p>
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <!-- Sidebar for Ads -->
             <aside class="hidden lg:block lg:col-span-1">
                 <div id="ad-sidebar">
+                    <!-- Ads will be inserted here -->
                     <div class="ad-placeholder text-center text-gray-400">
                         <p class="text-sm font-semibold text-orange-600 mb-2">AD SPACE</p>
                         <i data-lucide="megaphone" class="mx-auto h-8 w-8"></i>
@@ -44,9 +50,12 @@
                 </div>
             </aside>
 
+            <!-- Main Content Area -->
             <main class="lg:col-span-3">
 
+                <!-- Search and List View -->
                 <div id="list-view">
+                    <!-- Search Bar and Filter -->
                     <div class="mb-8 p-4 bg-white shadow-lg rounded-xl flex flex-col sm:flex-row gap-4">
                         <div class="relative flex-grow">
                             <i data-lucide="search" class="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400"></i>
@@ -59,34 +68,43 @@
                             <select id="type-filter" onchange="applyFilters()"
                                 class="w-full sm:w-48 pl-10 pr-4 py-3 border border-gray-300 rounded-lg appearance-none focus:ring-orange-500 focus:border-orange-500 bg-white text-base">
                                 <option value="">All Services</option>
-                                </select>
+                                <!-- Types will be populated by JS -->
+                            </select>
                         </div>
                     </div>
 
+                    <!-- Vendor List -->
                     <div id="vendor-list" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        </div>
+                        <!-- Vendor Cards will be inserted here by JavaScript -->
+                    </div>
 
+                    <!-- No Results Message -->
                     <p id="no-results" class="text-center text-gray-500 mt-10 text-xl hidden">
                         No services or menu items found matching your criteria. Try a broader search!
                     </p>
                 </div>
 
+                <!-- Profile View -->
                 <div id="profile-view" class="hidden">
                     <button onclick="showListView()" class="mb-6 inline-flex items-center text-orange-600 hover:text-orange-800 font-medium p-2 rounded-lg bg-orange-50 hover:bg-orange-100 transition">
                         <i data-lucide="arrow-left" class="h-5 w-5 mr-2"></i>
                         Back to Search Results
                     </button>
                     <div id="profile-details" class="bg-white p-6 shadow-xl rounded-xl">
-                        </div>
+                        <!-- Profile content will be inserted here by JavaScript -->
+                    </div>
                     
+                    <!-- Delivery Suggestion Block -->
                     <div id="delivery-suggestions" class="mt-8">
-                        </div>
+                        <!-- Delivery vendors will be suggested here -->
+                    </div>
                 </div>
 
             </main>
         </div>
     </div>
 
+    <!-- Footer -->
     <footer class="mt-12 py-6 bg-gray-800 text-center text-white">
         <p class="text-sm">
             Powered by <span class="font-bold text-orange-500">Pixi Belize</span>. 
@@ -98,8 +116,8 @@
     </footer>
 
     <script>
-        // Use a local JSON file path instead of the Apps Script URL
-        const DATA_SOURCE_URL = "list.json"; 
+        // !! IMPORTANT: REPLACE THIS PLACEHOLDER WITH YOUR DEPLOYED APPS SCRIPT URL !!
+        const APP_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby-tWFjR-3A7y0xdHmq0R3Zop-l9McjPcBYwF89POke02LRWsNFnlHghA9SGdGQIg4/exec"; 
 
         // Global state
         let allVendors = [];
@@ -115,9 +133,7 @@
                 return url;
             }
             const initials = fallbackText.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-            // Adjusted logic to use 'id' if 'name' is unavailable for fallback
-            const finalFallbackText = fallbackText || 'BP'; 
-            return `https://placehold.co/80x80/22c55e/ffffff?text=${encodeURIComponent(finalFallbackText)}`;
+            return `https://placehold.co/80x80/22c55e/ffffff?text=${encodeURIComponent(initials)}`;
         }
 
         /**
@@ -126,29 +142,23 @@
         function renderSocialIcons(vendor) {
             let icons = '';
             
-            // Normalize contact properties for unified access
-            const contactPhone = vendor.phone || vendor.ContactPhone;
-            const whatsApp = vendor.whatsAppUrl || vendor.WhatsApp;
-            const facebookUrl = vendor.facebookUrl || vendor.FacebookURL;
-            const instagramUrl = vendor.instagramUrl || vendor.InstagramURL;
-
             // Phone and WhatsApp are always important
-            if (contactPhone) {
-                icons += `<a href="tel:${contactPhone.replace(/=/g, '')}" title="Call ${vendor.name || vendor.Name}" class="text-gray-500 hover:text-orange-600"><i data-lucide="phone" class="h-5 w-5"></i></a>`;
+            if (vendor.ContactPhone) {
+                icons += `<a href="tel:${vendor.ContactPhone}" title="Call ${vendor.Name}" class="text-gray-500 hover:text-orange-600"><i data-lucide="phone" class="h-5 w-5"></i></a>`;
             }
-            if (whatsApp) {
-                const whatsappNumber = String(whatsApp || '').replace(/\D/g, ''); 
+            if (vendor.WhatsApp) {
+                const whatsappNumber = String(vendor.WhatsApp || '').replace(/\D/g, ''); 
                 if (whatsappNumber) {
-                    icons += `<a href="https://wa.me/${whatsappNumber}" target="_blank" title="WhatsApp ${vendor.name || vendor.Name}" class="text-gray-500 hover:text-green-500"><i data-lucide="message-square" class="h-5 w-5"></i></a>`;
+                    icons += `<a href="https://wa.me/${whatsappNumber}" target="_blank" title="WhatsApp ${vendor.Name}" class="text-gray-500 hover:text-green-500"><i data-lucide="message-square" class="h-5 w-5"></i></a>`;
                 }
             }
 
             // Check for specific social media links
-            if (facebookUrl) {
-                icons += `<a href="${facebookUrl}" target="_blank" title="Facebook" class="text-gray-500 hover:text-blue-700"><i data-lucide="facebook" class="h-5 w-5"></i></a>`;
+            if (vendor.FacebookURL) {
+                icons += `<a href="${vendor.FacebookURL}" target="_blank" title="Facebook" class="text-gray-500 hover:text-blue-700"><i data-lucide="facebook" class="h-5 w-5"></i></a>`;
             }
-            if (instagramUrl) {
-                icons += `<a href="${instagramUrl}" target="_blank" title="Instagram" class="text-gray-500 hover:text-pink-600"><i data-lucide="instagram" class="h-5 w-5"></i></a>`;
+            if (vendor.InstagramURL) {
+                icons += `<a href="${vendor.InstagramURL}" target="_blank" title="Instagram" class="text-gray-500 hover:text-pink-600"><i data-lucide="instagram" class="h-5 w-5"></i></a>`;
             }
 
             return icons;
@@ -172,15 +182,11 @@
             vendors.forEach(vendor => {
                 const card = document.createElement('div');
                 card.className = 'vendor-card bg-white p-5 rounded-xl shadow-md border border-gray-100 cursor-pointer flex flex-col justify-between';
-                card.onclick = () => showProfileView(vendor.id); // Use 'id' for JSON data
+                card.onclick = () => showProfileView(vendor.VendorID);
 
-                const iconUrl = getIconUrl(vendor.iconUrl, vendor.id); // Use 'iconUrl' from JSON
+                const iconUrl = getIconUrl(vendor.ProfileIconURL, vendor.Name);
                 const contactIcons = renderSocialIcons(vendor);
-                const matchedItems = matchedItemsMap[vendor.id]; // Use 'id' for JSON data
-
-                // Get vendor name for display (use a placeholder if not present, though the provided JSON doesn't have a 'name' field, it implies one for BPN001 etc.)
-                const vendorName = vendor.id || 'Unknown Vendor'; 
-                const vendorType = vendor.type || 'General Service'; 
+                const matchedItems = matchedItemsMap[vendor.VendorID];
 
                 let cardContentHTML = '';
                 
@@ -207,7 +213,7 @@
                         <div class="mt-2 mb-4">
                             <div class="flex items-center text-sm text-gray-600">
                                 <i data-lucide="map-pin" class="h-4 w-4 mr-2 text-orange-500"></i>
-                                <span>${vendor.location || 'Location not specified'}</span>
+                                <span>${vendor.Location || 'Location not specified'}</span>
                             </div>
                             <p class="text-base font-semibold text-orange-600 mt-3 hover:underline">
                                 View Profile & Menu Details
@@ -218,10 +224,10 @@
                 
                 card.innerHTML = `
                     <div class="flex items-center mb-4">
-                        <img src="${iconUrl}" onerror="this.onerror=null; this.src=getIconUrl(null, '${vendor.id}')" class="w-16 h-16 rounded-full object-cover mr-4 ring-2 ring-orange-500 p-0.5" alt="${vendorName} Logo">
+                        <img src="${iconUrl}" onerror="this.onerror=null; this.src=getIconUrl(null, '${vendor.Name}')" class="w-16 h-16 rounded-full object-cover mr-4 ring-2 ring-orange-500 p-0.5" alt="${vendor.Name} Logo">
                         <div>
-                            <h2 class="text-xl font-bold text-gray-900">${vendorName}</h2>
-                            <p class="text-sm text-orange-600 font-semibold">${vendorType}</p>
+                            <h2 class="text-xl font-bold text-gray-900">${vendor.Name}</h2>
+                            <p class="text-sm text-orange-600 font-semibold">${vendor.Type}</p>
                         </div>
                     </div>
                     ${cardContentHTML}
@@ -247,27 +253,16 @@
             const filteredVendors = allVendors.filter(vendor => {
                 let matchesQuery = false;
                 
-                // 1. Check Vendor ID (used as name), Location, and Keywords
-                // NOTE: 'Name' is not a field in the provided JSON, using 'id' as a stand-in for business name if needed.
-                const vendorName = vendor.id || ''; 
-                const searchableText = `${vendorName} ${vendor.location || ''} ${vendor.keywords || ''}`.toLowerCase();
+                // 1. Check Vendor Name, Location, and Keywords
+                const searchableText = `${vendor.Name || ''} ${vendor.Location || ''} ${vendor.SearchKeywords || ''}`.toLowerCase();
                 if (searchableText.includes(query)) {
                     matchesQuery = true;
                 }
 
                 // 2. Check Menu Items (Deep Search for Comparison)
                 const matchedItems = [];
-                // Handle the 'data' field being a JSON string or a parsed object
-                let vendorData = null;
-                try {
-                    vendorData = typeof vendor.data === 'string' && vendor.data.trim() !== "" ? JSON.parse(vendor.data) : vendor.data;
-                } catch(e) {
-                    console.error("Error parsing vendor data for ID:", vendor.id, e);
-                    vendorData = [];
-                }
-                
-                if (Array.isArray(vendorData)) {
-                    vendorData.forEach(category => {
+                if (vendor.DataJSON && Array.isArray(vendor.DataJSON)) {
+                    vendor.DataJSON.forEach(category => {
                         if (category.items && Array.isArray(category.items)) {
                             category.items.forEach(item => {
                                 // Check if item name or description contains the query
@@ -284,11 +279,11 @@
                 }
 
                 if (matchedItems.length > 0) {
-                    matchingItemsMap[vendor.id] = matchedItems;
+                    matchingItemsMap[vendor.VendorID] = matchedItems;
                 }
                 
                 // 3. Check Type Filter
-                const matchesType = !typeFilter || vendor.type === typeFilter;
+                const matchesType = !typeFilter || vendor.Type === typeFilter;
                 
                 return matchesQuery && matchesType;
             });
@@ -312,25 +307,16 @@
         }
 
         /**
-         * Renders the full, categorized menu from the vendor's data object.
+         * Renders the full, categorized menu from the DataJSON object.
          */
         function renderMenu(dataJson) {
-            // Handle the 'data' field being a JSON string or a parsed object
-            let parsedData = null;
-            try {
-                parsedData = typeof dataJson === 'string' && dataJson.trim() !== "" ? JSON.parse(dataJson) : dataJson;
-            } catch(e) {
-                console.error("Error parsing menu data:", e);
-                return '<p class="text-red-500">Error loading service details.</p>';
-            }
-
-            if (!parsedData || parsedData.length === 0) {
+            if (!dataJson || dataJson.length === 0) {
                 return '<p class="text-gray-500">No detailed menu or service list available.</p>';
             }
 
             let menuHTML = '';
 
-            const categories = Array.isArray(parsedData) ? parsedData : [{ category: "Details", description: "Services offered:", items: parsedData.items || [] }];
+            const categories = Array.isArray(dataJson) ? dataJson : [{ category: "Details", description: "Services offered:", items: dataJson.items || [] }];
 
             categories.forEach(category => {
                 menuHTML += `
@@ -366,35 +352,28 @@
             const suggestionsContainer = document.getElementById('delivery-suggestions');
             suggestionsContainer.innerHTML = '';
             
-            // Assume vendors with 'wings', 'burgers', 'pizza' in keywords are 'Restaurant' for this logic, 
-            // as 'type' is often empty in the provided JSON
-            const isRestaurant = currentVendor.keywords && (currentVendor.keywords.toLowerCase().includes('wings') || currentVendor.keywords.toLowerCase().includes('pizza') || currentVendor.keywords.toLowerCase().includes('burgers'));
-            
-            if (!isRestaurant || deliveryVendors.length === 0) {
-                return; // Only suggest delivery for restaurants/food vendors
+            if (currentVendor.Type !== 'Restaurant' || deliveryVendors.length === 0) {
+                return; // Only suggest delivery for restaurants
             }
 
             const shuffledDelivery = deliveryVendors.sort(() => 0.5 - Math.random());
             let deliveryCards = shuffledDelivery.slice(0, 3).map(vendor => { 
-                const iconUrl = getIconUrl(vendor.iconUrl, vendor.id);
+                const iconUrl = getIconUrl(vendor.ProfileIconURL, vendor.Name);
                 return `
-                    <div class="flex items-center p-4 bg-white rounded-lg shadow-sm border border-orange-200 cursor-pointer transition hover:bg-orange-50" onclick="showProfileView('${vendor.id}')">
-                        <img src="${iconUrl}" onerror="this.onerror=null; this.src=getIconUrl(null, '${vendor.id}')" class="w-10 h-10 rounded-full object-cover mr-3" alt="${vendor.id} Logo">
+                    <div class="flex items-center p-4 bg-white rounded-lg shadow-sm border border-orange-200 cursor-pointer transition hover:bg-orange-50" onclick="showProfileView('${vendor.VendorID}')">
+                        <img src="${iconUrl}" onerror="this.onerror=null; this.src=getIconUrl(null, '${vendor.Name}')" class="w-10 h-10 rounded-full object-cover mr-3" alt="${vendor.Name} Logo">
                         <div>
-                            <p class="font-semibold text-gray-900">${vendor.id}</p>
+                            <p class="font-semibold text-gray-900">${vendor.Name}</p>
                             <p class="text-sm text-orange-600">Tap to see rates</p>
                         </div>
                         <i data-lucide="arrow-right" class="h-5 w-5 ml-auto text-gray-400"></i>
                     </div>
                 `;
             }).join('');
-            
-            // Use 'id' as a stand-in for vendor name
-            const currentVendorName = currentVendor.id || 'this vendor';
 
             suggestionsContainer.innerHTML = `
                 <div class="p-5 bg-orange-100 rounded-xl">
-                    <h2 class="text-2xl font-bold text-orange-800 mb-4">Need Delivery for ${currentVendorName}?</h2>
+                    <h2 class="text-2xl font-bold text-orange-800 mb-4">Need Delivery for ${currentVendor.Name}?</h2>
                     <p class="text-gray-700 mb-4">Check out these trusted local delivery services who can bring your order right to your door:</p>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                         ${deliveryCards}
@@ -409,44 +388,41 @@
          */
         function renderProfile(vendor) {
             const profileContainer = document.getElementById('profile-details');
-            const iconUrl = getIconUrl(vendor.iconUrl, vendor.id);
-
-            // Use 'id' as a stand-in for vendor name
-            const vendorName = vendor.id || 'Unknown Vendor'; 
-            const vendorType = vendor.type || 'General Service'; 
+            const iconUrl = getIconUrl(vendor.ProfileIconURL, vendor.Name);
 
             let contactItems = '';
             
-            // Build the contact/social section, using JSON property names
-            if (vendor.location) {
-                contactItems += `<div class="flex items-center mb-2"><i data-lucide="map-pin" class="h-5 w-5 text-gray-500 mr-3"></i><span class="text-gray-800">${vendor.location}</span></div>`;
+            // Build the contact/social section
+            if (vendor.Location) {
+                contactItems += `<div class="flex items-center mb-2"><i data-lucide="map-pin" class="h-5 w-5 text-gray-500 mr-3"></i><span class="text-gray-800">${vendor.Location}</span></div>`;
             }
-            if (vendor.phone) {
-                contactItems += `<div class="flex items-center mb-2"><i data-lucide="phone" class="h-5 w-5 text-gray-500 mr-3"></i><a href="tel:${vendor.phone.replace(/=/g, '')}" class="text-blue-600 hover:underline">${vendor.phone.replace(/=/g, '')} (Call)</a></div>`;
+            if (vendor.ContactPhone) {
+                contactItems += `<div class="flex items-center mb-2"><i data-lucide="phone" class="h-5 w-5 text-gray-500 mr-3"></i><a href="tel:${vendor.ContactPhone}" class="text-blue-600 hover:underline">${vendor.ContactPhone} (Call)</a></div>`;
             }
-            if (vendor.whatsAppUrl) {
-                const whatsappNumber = String(vendor.whatsAppUrl || '').replace(/\D/g, ''); 
+            if (vendor.WhatsApp) {
+                const whatsappNumber = String(vendor.WhatsApp || '').replace(/\D/g, ''); 
                 if (whatsappNumber) {
                      contactItems += `<div class="flex items-center mb-2"><i data-lucide="message-square" class="h-5 w-5 text-green-500 mr-3"></i><a href="https://wa.me/${whatsappNumber}" target="_blank" class="text-green-600 hover:underline">Chat on WhatsApp</a></div>`;
                 }
             }
-            if (vendor.facebookUrl) {
-                contactItems += `<div class="flex items-center mb-2"><i data-lucide="facebook" class="h-5 w-5 text-blue-700 mr-3"></i><a href="${vendor.facebookUrl}" target="_blank" class="text-blue-600 hover:underline">Visit Facebook Page</a></div>`;
+            if (vendor.FacebookURL) {
+                contactItems += `<div class="flex items-center mb-2"><i data-lucide="facebook" class="h-5 w-5 text-blue-700 mr-3"></i><a href="${vendor.FacebookURL}" target="_blank" class="text-blue-600 hover:underline">Visit Facebook Page</a></div>`;
             }
-            if (vendor.instagramUrl) {
-                contactItems += `<div class="flex items-center mb-2"><i data-lucide="instagram" class="h-5 w-5 text-pink-600 mr-3"></i><a href="${vendor.instagramUrl}" target="_blank" class="text-pink-600 hover:underline">Visit Instagram Profile</a></div>`;
+            if (vendor.InstagramURL) {
+                contactItems += `<div class="flex items-center mb-2"><i data-lucide="instagram" class="h-5 w-5 text-pink-600 mr-3"></i><a href="${vendor.InstagramURL}" target="_blank" class="text-pink-600 hover:underline">Visit Instagram Profile</a></div>`;
             }
 
             profileContainer.innerHTML = `
                 <div class="flex flex-col md:flex-row items-center md:items-start border-b pb-6 mb-6">
-                    <img src="${iconUrl}" onerror="this.onerror=null; this.src=getIconUrl(null, '${vendor.id}')" class="w-24 h-24 rounded-full object-cover mb-4 md:mb-0 md:mr-6 ring-4 ring-orange-500 p-0.5" alt="${vendorName} Logo">
+                    <img src="${iconUrl}" onerror="this.onerror=null; this.src=getIconUrl(null, '${vendor.Name}')" class="w-24 h-24 rounded-full object-cover mb-4 md:mb-0 md:mr-6 ring-4 ring-orange-500 p-0.5" alt="${vendor.Name} Logo">
                     <div>
-                        <h1 class="text-3xl font-extrabold text-gray-900">${vendorName}</h1>
-                        <p class="text-lg text-orange-600 font-medium">${vendorType} Service</p>
+                        <h1 class="text-3xl font-extrabold text-gray-900">${vendor.Name}</h1>
+                        <p class="text-lg text-orange-600 font-medium">${vendor.Type} Service</p>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                    <!-- Contact Details Column (Now takes up the space where keywords used to be) -->
                     <div class="lg:col-span-2">
                         <h2 class="text-xl font-semibold text-gray-800 mb-4 border-b pb-2">Connect & Locate</h2>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -455,9 +431,10 @@
                     </div>
                 </div>
 
+                <!-- Categorized Menu/Services -->
                 <div class="mt-8">
                     <h2 class="text-2xl font-bold text-gray-900 mb-6">Service & Pricing Details</h2>
-                    ${renderMenu(vendor.data)}
+                    ${renderMenu(vendor.DataJSON)}
                 </div>
             `;
             // Suggest delivery services if it's a restaurant
@@ -469,7 +446,7 @@
          * Switches the view to the profile view for a specific vendor.
          */
         function showProfileView(vendorId) {
-            const vendor = allVendors.find(v => v.id === vendorId);
+            const vendor = allVendors.find(v => v.VendorID === vendorId);
             if (!vendor) {
                 console.error("Vendor not found:", vendorId);
                 // Fallback: simple message box
@@ -501,69 +478,68 @@
 
 
         /**
-         * Initial data fetch from the local JSON file.
+         * Initial data fetch from the Apps Script API.
          */
         async function fetchData() {
+            if (APP_SCRIPT_URL === "APP_SCRIPT_URL_PLACEHOLDER") {
+                 console.error("FATAL ERROR: Please replace APP_SCRIPT_URL_PLACEHOLDER with your actual deployed Google Apps Script URL.");
+                 return;
+            }
+
             const loadingEl = document.getElementById('loading-overlay');
             loadingEl.classList.remove('hidden');
 
-            try {
-                // Fetch the local JSON file
-                const response = await fetch(DATA_SOURCE_URL, { method: 'GET' });
+            const maxRetries = 5;
+            let currentDelay = 1000;
 
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status} when fetching local JSON.`);
+            for (let attempt = 0; attempt < maxRetries; attempt++) {
+                try {
+                    const response = await fetch(APP_SCRIPT_URL, { method: 'GET' });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+
+                    if (result.status === "success") {
+                        allVendors = result.data;
+                        
+                        // Populate vendor types for filtering
+                        allVendors.forEach(vendor => {
+                            vendorTypes.add(vendor.Type);
+                            if (vendor.Type === 'Delivery') {
+                                deliveryVendors.push(vendor);
+                            }
+                        });
+
+                        populateTypeFilter();
+                        applyFilters(); // Initial render of the list
+                        renderAdSidebar(); // Render the ads
+                        loadingEl.classList.add('hidden');
+                        return;
+                    } else {
+                        throw new Error(result.message || "Failed to retrieve data.");
+                    }
+
+                } catch (error) {
+                    if (attempt === maxRetries - 1) {
+                        document.body.insertAdjacentHTML('beforeend', `
+                            <div id="load-error-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+                                <div class="bg-white p-6 rounded-lg shadow-2xl">
+                                    <h3 class="text-xl font-bold text-red-600 mb-4">Connection Error</h3>
+                                    <p class="mb-4">Could not load service data. Please ensure the Apps Script URL is correct and deployed as a public web app.</p>
+                                    <p class="text-sm text-gray-500">Details: ${error.message}</p>
+                                    <button onclick="document.getElementById('load-error-modal').remove()" class="mt-4 bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600">Acknowledge</button>
+                                </div>
+                            </div>
+                        `);
+                        loadingEl.classList.add('hidden');
+                        return;
+                    }
+                    await new Promise(resolve => setTimeout(resolve, currentDelay));
+                    currentDelay *= 2; 
                 }
-
-                // The response is the array of vendors directly
-                const result = await response.json();
-
-                // Map 'type' based on keywords for empty entries, a common pattern for the provided JSON data
-                allVendors = result.map(vendor => {
-                    if (!vendor.type && vendor.keywords) {
-                        const lowerKeywords = vendor.keywords.toLowerCase();
-                        if (lowerKeywords.includes('pizza') || lowerKeywords.includes('wings') || lowerKeywords.includes('burgers') || lowerKeywords.includes('salads') || lowerKeywords.includes('pasta')) {
-                            vendor.type = 'Restaurant';
-                        } else if (lowerKeywords.includes('delivery') || lowerKeywords.includes('taxi') || lowerKeywords.includes('transfer')) {
-                            vendor.type = 'Delivery/Transport';
-                        } else if (lowerKeywords.includes('plumbing') || lowerKeywords.includes('electrical') || lowerKeywords.includes('tools') || lowerKeywords.includes('lumber')) {
-                            vendor.type = 'Hardware/Supply';
-                        } else if (lowerKeywords.includes('websites')) {
-                            vendor.type = 'Web Service';
-                        } else {
-                            vendor.type = 'Misc Service';
-                        }
-                    } else if (!vendor.type) {
-                        vendor.type = 'Misc Service';
-                    }
-                    return vendor;
-                });
-                
-                // Populate vendor types for filtering
-                allVendors.forEach(vendor => {
-                    vendorTypes.add(vendor.type);
-                    if (vendor.type.includes('Delivery')) { // Use includes for both Delivery and Delivery/Transport
-                        deliveryVendors.push(vendor);
-                    }
-                });
-
-                populateTypeFilter();
-                applyFilters(); // Initial render of the list
-                renderAdSidebar(); // Render the ads
-                loadingEl.classList.add('hidden');
-                
-            } catch (error) {
-                document.body.insertAdjacentHTML('beforeend', `
-                    <div id="load-error-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
-                        <div class="bg-white p-6 rounded-lg shadow-2xl">
-                            <h3 class="text-xl font-bold text-red-600 mb-4">Data Loading Error</h3>
-                            <p class="mb-4">Could not load service data from ${DATA_SOURCE_URL}. Make sure the file exists in the same directory.</p>
-                            <p class="text-sm text-gray-500">Details: ${error.message}</p>
-                            <button onclick="document.getElementById('load-error-modal').remove()" class="mt-4 bg-red-500 text-white py-2 px-4 rounded hover:bg-red-600">Acknowledge</button>
-                        </div>
-                    </div>
-                `);
-                loadingEl.classList.add('hidden');
             }
         }
 
@@ -575,25 +551,7 @@
             adSidebar.innerHTML = '';
             
             // Collect all vendors with valid ad content
-            const availableAds = allVendors.filter(v => {
-                let adData = v.adContent;
-                // Check if adContent is a TRUE string or an object with title/body
-                if (typeof adData === 'string') {
-                    // Check for the known ad-as-string formats from the JSON
-                    if (adData.toUpperCase() === 'TRUE' || adData.startsWith('{"title"')) {
-                        try {
-                            // If it's a JSON string, parse it to see if it's a structured ad
-                            const parsedAd = JSON.parse(adData);
-                            return parsedAd.title && parsedAd.body;
-                        } catch (e) {
-                            // If it's just 'TRUE' (or a simple string) and no structured ad, skip it for the sidebar.
-                            return false; 
-                        }
-                    }
-                }
-                // Check for the structured ad object
-                return adData && typeof adData === 'object' && adData.title && adData.body;
-            });
+            const availableAds = allVendors.filter(v => v.AdContent && typeof v.AdContent === 'object' && v.AdContent.title && v.AdContent.body);
 
             if (availableAds.length === 0) {
                  adSidebar.innerHTML = `
@@ -605,25 +563,14 @@
                  `;
             } else {
                 // For simplicity, pick a random ad to display
-                const randomAdVendor = availableAds[Math.floor(Math.random() * availableAds.length)];
-                let adContent = randomAdVendor.adContent;
-
-                // Handle adContent being a JSON string for structured ads
-                if (typeof adContent === 'string' && adContent.startsWith('{"title"')) {
-                    try {
-                        adContent = JSON.parse(adContent);
-                    } catch(e) {
-                         // Should not happen if the filter was correct, but as a safeguard
-                         adContent = { title: "Special Offer!", body: "Click to see a deal from this vendor." };
-                    }
-                }
+                const randomAd = availableAds[Math.floor(Math.random() * availableAds.length)];
                 
                 adSidebar.innerHTML = `
                     <div class="ad-placeholder">
                         <p class="text-sm font-semibold text-orange-600">FEATURED AD</p>
-                        <h3 class="text-xl font-bold text-gray-900 mt-1">${adContent.title}</h3>
-                        <p class="text-gray-700 mt-2 text-sm">${adContent.body}</p>
-                        <button onclick="showProfileView('${randomAdVendor.id}')" class="mt-3 w-full bg-orange-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-orange-700 transition">
+                        <h3 class="text-xl font-bold text-gray-900 mt-1">${randomAd.AdContent.title}</h3>
+                        <p class="text-gray-700 mt-2 text-sm">${randomAd.AdContent.body}</p>
+                        <button onclick="showProfileView('${randomAd.VendorID}')" class="mt-3 w-full bg-orange-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-orange-700 transition">
                             View Offer
                         </button>
                     </div>
